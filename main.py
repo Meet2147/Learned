@@ -1,10 +1,22 @@
 from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from datetime import date
+import csv
+import os
 
 app = FastAPI()
 
-feedback_data = []
+CSV_FILE = "feedback.csv"
+FIELDS = ["Name", "Date", "Clarity of Explanation", "Engagement", "Knowledge", 
+          "Preparedness", "Communication", "Overall Satisfaction", "Notes"]
+
+def write_to_csv(data):
+    file_exists = os.path.isfile(CSV_FILE)
+    with open(CSV_FILE, "a", newline="") as csvfile:
+        writer = csv.DictWriter(csvfile, fieldnames=FIELDS)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(data)
 
 @app.get("/", response_class=HTMLResponse)
 def index():
@@ -130,7 +142,7 @@ async def submit_feedback(name: str = Form(...), date: date = Form(...),
                           preparedness: int = Form(...), communication: int = Form(...),
                           satisfaction: int = Form(...), feedback_notes:str = Form(...)):
 
-    feedback_data.append({
+    feedback_data = {
         "Name": name,
         "Date": date,
         "Clarity of Explanation": clarity,
@@ -140,10 +152,17 @@ async def submit_feedback(name: str = Form(...), date: date = Form(...),
         "Communication": communication,
         "Overall Satisfaction": satisfaction,
         "Notes": feedback_notes
-    })
+    }
+
+    write_to_csv(feedback_data)
 
     return {"message": "Feedback submitted successfully!"}
 
 @app.get("/feedback", response_model=list)
 async def get_feedback():
-    return feedback_data
+    feedback_list = []
+    with open(CSV_FILE, "r") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            feedback_list.append(row)
+    return feedback_list
