@@ -4,6 +4,7 @@ from datetime import date
 import csv
 import requests
 from io import StringIO
+import pandas as pd
 
 app = FastAPI()
 
