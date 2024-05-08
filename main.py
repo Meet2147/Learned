@@ -7,9 +7,8 @@ from io import StringIO
 
 app = FastAPI()
 
-CSV_URL = "https://raw.githubusercontent.com/Meet2147/Learned/main/feedback.csv"
-FIELDS = ["Name", "Date", "Clarity of Explanation", "Engagement", "Knowledge", 
-          "Preparedness", "Communication", "Overall Satisfaction", "Notes"]
+feedback_data = pd.DataFrame(columns=["Name", "Date", "Clarity of Explanation", "Engagement", "Knowledge", 
+                                      "Preparedness", "Communication", "Overall Satisfaction", "Notes"])
 
 def write_to_csv(data):
     csv_data = requests.get(CSV_URL).text.strip()
@@ -167,10 +166,7 @@ async def submit_feedback(name: str = Form(...), date: date = Form(...),
 
     return {"message": "Feedback submitted successfully!"}
 
+
 @app.get("/feedback", response_model=list)
 async def get_feedback():
-    csv_data = requests.get(CSV_URL).text.strip()
-    with StringIO(csv_data) as csvfile:
-        reader = csv.DictReader(csvfile)
-        feedback_list = list(reader)
-    return feedback_list
+    return feedback_data.to_dict(orient="records")
