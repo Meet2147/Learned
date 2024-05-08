@@ -2,22 +2,31 @@ from fastapi import FastAPI, Form
 from fastapi.responses import HTMLResponse
 from datetime import date
 import csv
-import os
+import requests
+from io import StringIO
 
 app = FastAPI()
 
-CSV_FILE = "feedback.csv"
+CSV_URL = "https://raw.githubusercontent.com/Meet2147/Learned/main/feedback.csv"
 FIELDS = ["Name", "Date", "Clarity of Explanation", "Engagement", "Knowledge", 
           "Preparedness", "Communication", "Overall Satisfaction", "Notes"]
 
 def write_to_csv(data):
-    file_exists = os.path.isfile(CSV_FILE)
-    with open(CSV_FILE, "a", newline="") as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=FIELDS)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(data)
+    csv_data = requests.get(CSV_URL).text.strip()
+    with StringIO(csv_data) as csvfile:
+        reader = csv.DictReader(csvfile)
+        feedback_list = list(reader)
+        
+    feedback_list.append(data)
 
+    with StringIO() as buffer:
+        writer = csv.DictWriter(buffer, fieldnames=FIELDS)
+        writer.writeheader()
+        writer.writerows(feedback_list)
+
+        # Post updated CSV content back to GitHub
+        requests.put(CSV_URL, data=buffer.getvalue())
+              
 @app.get("/", response_class=HTMLResponse)
 def index():
     return """
@@ -160,9 +169,8 @@ async def submit_feedback(name: str = Form(...), date: date = Form(...),
 
 @app.get("/feedback", response_model=list)
 async def get_feedback():
-    feedback_list = []
-    with open(CSV_FILE, "r") as csvfile:
+    csv_data = requests.get(CSV_URL).text.strip()
+    with StringIO(csv_data) as csvfile:
         reader = csv.DictReader(csvfile)
-        for row in reader:
-            feedback_list.append(row)
+        feedback_list = list(reader)
     return feedback_list
